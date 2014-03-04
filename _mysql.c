@@ -38,8 +38,8 @@ PERFORMANCE OF THIS SOFTWARE.
 #include "mysql.h"
 #include "mysqld_error.h"
 #include "errmsg.h"
-#include <mysql/sql_common.h>
 #include <m_ctype.h>
+#include <mysql/sql_common.h>
 
 
 #if PY_VERSION_HEX < 0x02020000
