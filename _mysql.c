@@ -38,6 +38,8 @@ PERFORMANCE OF THIS SOFTWARE.
 #include "mysql.h"
 #include "mysqld_error.h"
 #include "errmsg.h"
+#include <mysql/sql_common.h>
+
 
 #if PY_VERSION_HEX < 0x02020000
 # define MyTuple_Resize(t,n,d) _PyTuple_Resize(t, n, d)
@@ -1411,7 +1413,12 @@ _mysql_ResultObject_fetch_row(
 		_mysql_row_to_dict_old
 	};
 	_PYFUNC *convert_row;
-	unsigned int maxrows=1, how=0, skiprows=0, rowsadded;
+	unsigned int maxrows=1, skiprows=0, rowsadded;
+	// Python can pass in an integer, but you attempted to
+	// put it into an unsigned int.
+	// This will make rows < 0 an erroneous check.
+	// Fixed.
+	int how=0;
 	PyObject *r=NULL;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|ii:fetch_row", kwlist,
@@ -2502,8 +2509,10 @@ _mysql_ConnectionObject_getattr(
 	{
 		MyMemberlist(*l);
 		for (l = _mysql_ConnectionObject_memberlist; l->name != NULL; l++) {
-			if (strcmp(l->name, name) == 0)
-				return PyMember_GetOne((char *)self, l);
+			// if the names match:
+			if (strcmp(l->name, name) == 0) {
+				return PyMember_GetOne((PyObject *)self, l);
+			}
 		}
 		PyErr_SetString(PyExc_AttributeError, name);
 		return NULL;
@@ -2529,7 +2538,7 @@ _mysql_ResultObject_getattr(
 		MyMemberlist(*l);
 		for (l = _mysql_ResultObject_memberlist; l->name != NULL; l++) {
 			if (strcmp(l->name, name) == 0)
-				return PyMember_GetOne((char *)self, l);
+				return PyMember_GetOne((PyObject *)self, l);
 		}
 		PyErr_SetString(PyExc_AttributeError, name);
 		return NULL;
@@ -2555,7 +2564,7 @@ _mysql_ConnectionObject_setattr(
 		MyMemberlist(*l);
 		for (l = _mysql_ConnectionObject_memberlist; l->name != NULL; l++)
 			if (strcmp(l->name, name) == 0)
-				return PyMember_SetOne((char *)self, l, v);
+				return PyMember_SetOne((PyObject *)self, l, v);
 	}
         PyErr_SetString(PyExc_AttributeError, name);
         return -1;
@@ -2580,7 +2589,7 @@ _mysql_ResultObject_setattr(
 		MyMemberlist(*l);
 		for (l = _mysql_ResultObject_memberlist; l->name != NULL; l++)
 			if (strcmp(l->name, name) == 0)
-				return PyMember_SetOne((char *)self, l, v);
+				return PyMember_SetOne((PyObject *)self, l, v);
 	}
         PyErr_SetString(PyExc_AttributeError, name);
         return -1;
